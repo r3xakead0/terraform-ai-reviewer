@@ -1,0 +1,143 @@
+name: Terraform AI Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - "demo/terraform/**"
+      - "src/terraform_ai_reviewer/**"
+      - "reviewer.yaml"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/terraform-review.yml"
+
+concurrency:
+  group: terraform-ai-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write
+
+jobs:
+  review:
+    name: Deterministic Terraform gate
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out the pull request merge commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: 1.13.3
+          terraform_wrapper: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+
+      - name: Install locked Python dependencies
+        run: uv sync --locked --all-groups
+
+      - name: Check Terraform formatting
+        run: terraform -chdir=demo/terraform fmt -check -recursive
+
+      - name: Initialize and validate the plan-only example
+        run: |
+          terraform -chdir=demo/terraform init -input=false
+          terraform -chdir=demo/terraform validate
+
+      - name: Generate Terraform plan JSON without contacting AWS
+        env:
+          AWS_ACCESS_KEY_ID: terraform-reviewer-demo
+          AWS_SECRET_ACCESS_KEY: terraform-reviewer-demo
+        run: |
+          mkdir -p .artifacts
+          terraform -chdir=demo/terraform plan \
+            -input=false \
+            -lock=false \
+            -no-color \
+            -out=../../.artifacts/tfplan \
+            > /dev/null
+          terraform -chdir=demo/terraform show \
+            -json ../../.artifacts/tfplan \
+            > .artifacts/tfplan.json
+
+      - name: Run deterministic Checkov analysis
+        run: |
+          uv run checkov \
+            -f .artifacts/tfplan.json \
+            --repo-root-for-plan-enrichment demo/terraform \
+            --deep-analysis \
+            --soft-fail \
+            --quiet \
+            -o json \
+            > .artifacts/checkov.json
+
+      - name: Assume the Bedrock-only reviewer role
+        continue-on-error: true
+        uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          role-session-name: tf-review-${{ github.run_id }}
+
+      - name: Build deterministic and AI review
+        env:
+          BEDROCK_MODEL_ID: us.anthropic.claude-sonnet-4-6
+          AWS_EC2_METADATA_DISABLED: "true"
+          GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          uv run terraform-ai-review review \
+            --plan .artifacts/tfplan.json \
+            --checkov .artifacts/checkov.json \
+            --provider bedrock \
+            --config reviewer.yaml \
+            --json-out .artifacts/review.json \
+            --markdown-out .artifacts/review.md
+
+      - name: Add the sanitized review to the job summary
+        run: sed -n '1,$p' .artifacts/review.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create or update the persistent PR comment
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          REVIEW_MARKDOWN: .artifacts/review.md
+        with:
+          script: |
+            const fs = require("fs");
+            const marker = "<!-- terraform-ai-reviewer -->";
+            const body = fs.readFileSync(process.env.REVIEW_MARKDOWN, "utf8");
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              per_page: 100,
+            });
+            const existing = comments.find(
+              (comment) => comment.user?.type === "Bot" && comment.body?.includes(marker),
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+      - name: Enforce deterministic policy decision
+        run: uv run terraform-ai-review gate --review .artifacts/review.json

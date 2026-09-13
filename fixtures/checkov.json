@@ -1,0 +1,46 @@
+{
+  "check_type": "terraform_plan",
+  "results": {
+    "passed_checks": [],
+    "failed_checks": [
+      {
+        "check_id": "CKV_AWS_24",
+        "check_name": "Ensure no security groups allow ingress from 0.0.0.0/0 to port 22",
+        "resource": "aws_security_group.app",
+        "file_path": "/demo/terraform/main.tf",
+        "guideline": "https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/ec2-policies/ec2-4"
+      },
+      {
+        "check_id": "CKV_AWS_355",
+        "check_name": "Ensure no IAM policies documents allow wildcard resources",
+        "resource": "aws_iam_policy.app",
+        "file_path": "/demo/terraform/main.tf",
+        "guideline": "https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/iam-policies/iam-49"
+      },
+      {
+        "check_id": "CKV_AWS_21",
+        "check_name": "Ensure all data stored in the S3 bucket have versioning enabled",
+        "resource": "aws_s3_bucket.data",
+        "file_path": "/demo/terraform/main.tf",
+        "guideline": "https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/s3-policies/s3-16-enable-versioning"
+      },
+      {
+        "check_id": "CKV2_AWS_6",
+        "check_name": "Ensure that S3 bucket has a Public Access block",
+        "resource": "aws_s3_bucket.data",
+        "file_path": "/demo/terraform/main.tf",
+        "guideline": "https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/s3-policies/s3-24"
+      },
+      {
+        "check_id": "CKV_AWS_18",
+        "check_name": "Ensure the S3 bucket has access logging enabled",
+        "resource": "aws_s3_bucket.data",
+        "file_path": "/demo/terraform/main.tf",
+        "guideline": "https://docs.prismacloud.io/"
+      }
+    ],
+    "skipped_checks": []
+  },
+  "summary": {"passed": 0, "failed": 5, "skipped": 0}
+}
+

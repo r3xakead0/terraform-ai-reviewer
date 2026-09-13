@@ -1,0 +1,19 @@
+{
+  "overview": "The plan creates a small demonstration stack with restricted SSH access, scoped S3 read permissions, bucket versioning, and account-level public access safeguards. The remaining scanner findings are non-blocking hardening opportunities.",
+  "risk_level": "medium",
+  "findings": [
+    {
+      "title": "Additional S3 hardening remains advisable",
+      "severity": "medium",
+      "category": "data-protection",
+      "resources": ["aws_s3_bucket.data"],
+      "evidence": "The deterministic scanner reports advisory controls beyond the four demonstration blockers, including logging, encryption-key, and lifecycle recommendations.",
+      "impact": "Operational visibility, key isolation, and data lifecycle management may be weaker than a production baseline requires.",
+      "recommendation": "Evaluate server access logging, customer-managed encryption keys, and lifecycle rules before adapting this example for production.",
+      "confidence": "high"
+    }
+  ],
+  "questions": [
+    "Which production S3 hardening baseline should replace the intentionally minimal demo configuration?"
+  ]
+}

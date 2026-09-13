@@ -1,0 +1,28 @@
+language: en
+
+limits:
+  max_resources: 100
+  max_attributes_per_resource: 20
+  max_value_chars: 300
+  max_deterministic_findings: 50
+  max_ai_findings: 10
+  max_comment_chars: 60000
+
+blocking_checks:
+  CKV_AWS_24:
+    name: Public SSH ingress
+    severity: critical
+    category: network
+  CKV_AWS_355:
+    name: IAM policy uses a wildcard resource
+    severity: critical
+    category: iam
+  CKV_AWS_21:
+    name: S3 bucket versioning is disabled
+    severity: high
+    category: data-protection
+  CKV2_AWS_6:
+    name: S3 bucket has no Public Access Block
+    severity: high
+    category: data-exposure
+

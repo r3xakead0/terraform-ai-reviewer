@@ -1,0 +1,31 @@
+{
+  "overview": "The plan combines an internet-facing administrative port, an unconstrained IAM policy, and weakened S3 safeguards. The deterministic findings should be resolved before merge.",
+  "risk_level": "critical",
+  "findings": [
+    {
+      "title": "Public SSH and wildcard IAM compound compromise impact",
+      "severity": "critical",
+      "category": "security",
+      "resources": ["aws_security_group.app", "aws_iam_policy.app"],
+      "evidence": "SSH is open to 0.0.0.0/0 while the application policy allows every action on every resource.",
+      "impact": "A compromised workload or credential could gain broad account access.",
+      "recommendation": "Restrict SSH to an approved network or Session Manager and grant only required S3 actions on the application bucket.",
+      "confidence": "high"
+    },
+    {
+      "title": "Bucket recovery and exposure controls are missing",
+      "severity": "high",
+      "category": "data-protection",
+      "resources": ["aws_s3_bucket.data"],
+      "evidence": "The scanner reports no versioning and no Public Access Block for the bucket.",
+      "impact": "Objects are easier to expose or lose through accidental overwrite and deletion.",
+      "recommendation": "Enable versioning and restore all four S3 Public Access Block settings.",
+      "confidence": "high"
+    }
+  ],
+  "questions": [
+    "What approved operator network requires direct SSH access?",
+    "Which exact S3 API operations does the application need?"
+  ]
+}
+

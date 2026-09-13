@@ -1,0 +1,43 @@
+diff --git a/demo/terraform/main.tf b/demo/terraform/main.tf
+--- a/demo/terraform/main.tf
++++ b/demo/terraform/main.tf
+@@ -12,7 +12,7 @@ resource "aws_security_group" "app" {
+     from_port   = 22
+     to_port     = 22
+     protocol    = "tcp"
+-    cidr_blocks = ["10.0.0.0/8"]
++    cidr_blocks = ["0.0.0.0/0"]
+   }
+ 
+   egress {
+@@ -30,8 +30,8 @@ resource "aws_iam_policy" "app" {
+     Version = "2012-10-17"
+     Statement = [{
+       Effect   = "Allow"
+-      Action   = ["s3:GetObject"]
+-      Resource = ["arn:aws:s3:::${local.bucket_name}/*"]
++      Action   = ["*"]
++      Resource = ["*"]
+     }]
+   })
+ }
+@@ -40,19 +40,3 @@ resource "aws_s3_bucket" "data" {
+   bucket        = local.bucket_name
+   force_destroy = false
+ }
+-
+-resource "aws_s3_bucket_versioning" "data" {
+-  bucket = aws_s3_bucket.data.id
+-  versioning_configuration {
+-    status = "Enabled"
+-  }
+-}
+-
+-resource "aws_s3_bucket_public_access_block" "data" {
+-  bucket = aws_s3_bucket.data.id
+-
+-  block_public_acls       = true
+-  block_public_policy     = true
+-  ignore_public_acls      = true
+-  restrict_public_buckets = true
+-}

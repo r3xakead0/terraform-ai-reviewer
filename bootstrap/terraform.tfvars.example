@@ -1,0 +1,5 @@
+github_oidc_subject = "repo:YOUR_ORG/YOUR_REPOSITORY:pull_request"
+
+# Reuse the account-level provider if it already exists:
+# existing_oidc_provider_arn = "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"
+

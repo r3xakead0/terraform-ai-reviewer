@@ -1,0 +1,14 @@
+.artifacts/
+.coverage
+.pytest_cache/
+.ruff_cache/
+.terraform/
+.venv/
+__pycache__/
+*.py[cod]
+*.tfplan
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+crash.log
